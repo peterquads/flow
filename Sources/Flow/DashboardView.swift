@@ -85,15 +85,18 @@ struct DashboardView: View {
         }
     }
 
+    private var circleButtonSize: CGFloat { 40 * fontScale }
+    private var circleIconSize: CGFloat { 15 * fontScale }
+
     private var addEntryButton: some View {
         Button(action: { showManualEntry = true }) {
             ZStack {
                 Circle().fill(GrayPalette.charcoal)
                 Image(systemName: "plus")
-                    .font(.system(size: 14 * fontScale, weight: .bold))
+                    .font(.system(size: circleIconSize, weight: .semibold))
                     .foregroundColor(GrayPalette.cream)
             }
-            .frame(width: 40 * fontScale, height: 40 * fontScale)
+            .frame(width: circleButtonSize, height: circleButtonSize)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -107,13 +110,18 @@ struct DashboardView: View {
     private var settingsButton: some View {
         Button(action: { showSettingsSheet = true }) {
             ZStack {
-                Circle().fill(Color.white)
-                Circle().stroke(GrayPalette.hairline.opacity(0.6), lineWidth: 1)
+                // strokeBorder insets the line — keeps the visible outer edge
+                // at exactly the same diameter as the filled add-entry circle.
+                Circle()
+                    .fill(Color.white)
+                    .overlay(
+                        Circle().strokeBorder(GrayPalette.hairline.opacity(0.6), lineWidth: 1)
+                    )
                 Image(systemName: "gearshape")
-                    .font(.system(size: 16 * fontScale, weight: .medium))
+                    .font(.system(size: circleIconSize, weight: .semibold))
                     .foregroundColor(GrayPalette.textSecondary)
             }
-            .frame(width: 40 * fontScale, height: 40 * fontScale)
+            .frame(width: circleButtonSize, height: circleButtonSize)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)

@@ -9,6 +9,16 @@ final class AppStore: ObservableObject {
     @Published var draftName: String = ""
     @Published private(set) var elapsedDisplay: String = "00:00"
     @Published private(set) var historyMRU: [String] = []
+    @Published var showDailyQuote: Bool = AppStore.loadShowDailyQuote() {
+        didSet { UserDefaults.standard.set(showDailyQuote, forKey: AppStore.showQuoteKey) }
+    }
+
+    private static let showQuoteKey = "Flow.showDailyQuote"
+    private static func loadShowDailyQuote() -> Bool {
+        let d = UserDefaults.standard
+        if d.object(forKey: showQuoteKey) == nil { return true } // default on
+        return d.bool(forKey: showQuoteKey)
+    }
 
     private var timer: Timer?
     private var saveWorkItem: DispatchWorkItem?

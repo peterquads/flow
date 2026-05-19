@@ -29,7 +29,9 @@ struct MenuBarPanel: View {
                     suggestionList
                 }
                 divider
-                quoteBlock
+                if store.showDailyQuote {
+                    quoteBlock
+                }
                 footer
             }
             .padding(.horizontal, 14)

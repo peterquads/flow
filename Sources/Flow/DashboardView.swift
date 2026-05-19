@@ -128,6 +128,9 @@ struct DashboardView: View {
         .help("Settings")
         .confirmationDialog("Settings", isPresented: $showSettingsSheet, titleVisibility: .hidden) {
             Button("Download as CSV…") { CSVExport.presentSavePanel(tasks: store.tasks) }
+            Button(store.showDailyQuote ? "Hide daily quote" : "Show daily quote") {
+                store.showDailyQuote.toggle()
+            }
             Button("Clear all data…", role: .destructive) { showClearAlert = true }
             Button("Cancel", role: .cancel) {}
         }

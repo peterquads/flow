@@ -48,6 +48,11 @@ struct TimeNumeralsEditor: View {
             }
         }
         .onChange(of: date) { _, _ in syncFields() }
+        .onDisappear {
+            // Flush any pending text into the bound date if the user dismissed
+            // before blurring the field — e.g. clicked Save mid-edit.
+            if let f = focus { commit(f) }
+        }
     }
 
     private func digitField(_ field: Field) -> some View {

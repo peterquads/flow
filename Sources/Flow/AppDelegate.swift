@@ -71,7 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover = NSPopover()
         popover.behavior = .transient
         popover.animates = false
-        popover.appearance = NSAppearance(named: .aqua)
+        // Native dark vibrant look — matches Control Center / Sound popover.
+        popover.appearance = NSAppearance(named: .vibrantDark)
         let hosting = NSHostingController(rootView: panel)
         hosting.sizingOptions = [.intrinsicContentSize]
         popover.contentViewController = hosting

@@ -1,6 +1,24 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Dark vibrant palette for the menu bar popover
+//
+// Matches the native macOS Control Center / Sound popover look — dark
+// translucent background, white text, soft hairlines. Hardcoded here
+// (rather than via GrayPalette) so the dashboard window can keep its
+// cream/charcoal aesthetic independently.
+
+private enum PanelPalette {
+    static let primary = Color.white.opacity(0.95)
+    static let secondary = Color.white.opacity(0.72)
+    static let muted = Color.white.opacity(0.42)
+    static let hairline = Color.white.opacity(0.10)
+    static let inputBG = Color.white.opacity(0.08)
+    static let hoverBG = Color.white.opacity(0.10)
+    static let pillBG = Color.white.opacity(0.92)
+    static let pillFG = Color.black.opacity(0.85)
+}
+
 struct MenuBarPanel: View {
     @EnvironmentObject var store: AppStore
     @FocusState private var fieldFocused: Bool
@@ -15,8 +33,11 @@ struct MenuBarPanel: View {
 
     var body: some View {
         ZStack {
-            BlurView(material: .popover, blending: .behindWindow)
-            GrayPalette.cream.opacity(0.35)
+            BlurView(
+                material: .hudWindow,
+                blending: .behindWindow,
+                forcedAppearance: .vibrantDark
+            )
             VStack(alignment: .leading, spacing: 12) {
                 if let current = store.currentTask {
                     runningStrip(current)
@@ -49,15 +70,15 @@ struct MenuBarPanel: View {
     private var idleStrip: some View {
         HStack(spacing: 10) {
             Circle()
-                .stroke(GrayPalette.hairline, lineWidth: 1)
+                .stroke(PanelPalette.muted, lineWidth: 1)
                 .frame(width: 6, height: 6)
             Text("No task running")
                 .font(.mono(12))
-                .foregroundColor(GrayPalette.muted)
+                .foregroundColor(PanelPalette.muted)
             Spacer()
             Text("--:--")
                 .font(.mono(14, weight: .medium))
-                .foregroundColor(GrayPalette.muted.opacity(0.6))
+                .foregroundColor(PanelPalette.muted.opacity(0.6))
                 .monospacedDigit()
         }
         .frame(height: 32)
@@ -66,18 +87,18 @@ struct MenuBarPanel: View {
     private func runningStrip(_ task: Task) -> some View {
         HStack(spacing: 10) {
             Circle()
-                .fill(GrayPalette.charcoal)
+                .fill(PanelPalette.primary)
                 .frame(width: 6, height: 6)
                 .opacity(task.isRunning ? 1.0 : 0.25)
             Text(task.name)
                 .font(.mono(13))
-                .foregroundColor(GrayPalette.charcoal)
+                .foregroundColor(PanelPalette.primary)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 8)
             Text(store.elapsedDisplay)
                 .font(.mono(14, weight: .medium))
-                .foregroundColor(GrayPalette.charcoal)
+                .foregroundColor(PanelPalette.primary)
                 .monospacedDigit()
                 .opacity(task.isRunning ? 1.0 : 0.55)
             CircleIconButton(systemName: task.isRunning ? "pause.fill" : "play.fill",
@@ -97,12 +118,12 @@ struct MenuBarPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(store.currentTask != nil ? "Start a new task" : "What are you working on?")
                 .font(.emilio(.regular, size: 13))
-                .foregroundColor(GrayPalette.textSecondary)
+                .foregroundColor(PanelPalette.secondary)
             HStack(spacing: 8) {
                 TextField("", text: $store.draftName, prompt: Text("Type a task name…")
-                    .foregroundColor(GrayPalette.muted))
+                    .foregroundColor(PanelPalette.muted))
                     .font(.mono(13))
-                    .foregroundColor(GrayPalette.charcoal)
+                    .foregroundColor(PanelPalette.primary)
                     .textFieldStyle(.plain)
                     .focused($fieldFocused)
                     .onSubmit(submit)
@@ -111,7 +132,7 @@ struct MenuBarPanel: View {
                     Button(action: { store.draftName = "" }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 12))
-                            .foregroundColor(GrayPalette.muted)
+                            .foregroundColor(PanelPalette.muted)
                     }
                     .buttonStyle(.plain)
                 }
@@ -120,11 +141,11 @@ struct MenuBarPanel: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(GrayPalette.creamDeep.opacity(0.6))
+                    .fill(PanelPalette.inputBG)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(GrayPalette.hairline, lineWidth: 1)
+                    .stroke(PanelPalette.hairline, lineWidth: 1)
             )
         }
     }
@@ -142,20 +163,20 @@ struct MenuBarPanel: View {
                             .frame(width: 6, height: 6)
                         Text(name)
                             .font(.mono(12))
-                            .foregroundColor(GrayPalette.charcoal)
+                            .foregroundColor(PanelPalette.primary)
                             .lineLimit(1)
                             .truncationMode(.tail)
                         Spacer()
                         Image(systemName: "return")
                             .font(.system(size: 10))
-                            .foregroundColor(GrayPalette.muted)
+                            .foregroundColor(PanelPalette.muted)
                             .opacity(idx == highlightedIndex ? 1 : 0)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(idx == highlightedIndex ? GrayPalette.creamDeep.opacity(0.7) : Color.clear)
+                            .fill(idx == highlightedIndex ? PanelPalette.hoverBG : Color.clear)
                     )
                     .contentShape(Rectangle())
                 }
@@ -167,7 +188,7 @@ struct MenuBarPanel: View {
 
     private var divider: some View {
         Rectangle()
-            .fill(GrayPalette.hairline)
+            .fill(PanelPalette.hairline)
             .frame(height: 1)
     }
 
@@ -176,13 +197,13 @@ struct MenuBarPanel: View {
         return VStack(alignment: .leading, spacing: 5) {
             Text("\u{201C}\(q.text)\u{201D}")
                 .font(.custom("EmilioTest-RegularItalic", size: 12))
-                .foregroundColor(GrayPalette.textSecondary)
+                .foregroundColor(PanelPalette.secondary)
                 .lineLimit(5)
                 .fixedSize(horizontal: false, vertical: true)
             Text(q.author.uppercased())
                 .font(.mono(9, weight: .semibold))
                 .tracking(1.8)
-                .foregroundColor(GrayPalette.muted)
+                .foregroundColor(PanelPalette.muted)
         }
         .padding(.bottom, 2)
     }
@@ -192,7 +213,7 @@ struct MenuBarPanel: View {
             Button(action: onOpenDashboard) {
                 Label("Dashboard", systemImage: "chart.bar.xaxis")
                     .font(.mono(11))
-                    .foregroundColor(GrayPalette.textSecondary)
+                    .foregroundColor(PanelPalette.secondary)
             }
             .buttonStyle(.plain)
             Spacer()
@@ -211,7 +232,6 @@ struct MenuBarPanel: View {
         store.startTask(name: name)
         onClose()
     }
-
 }
 
 private struct CircleIconButton: View {
@@ -224,13 +244,13 @@ private struct CircleIconButton: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(GrayPalette.charcoal)
+                .foregroundColor(PanelPalette.primary)
                 .frame(width: 28, height: 28)
                 .background(
-                    Circle().fill(hovering ? GrayPalette.charcoal.opacity(0.08) : .white.opacity(0.5))
+                    Circle().fill(hovering ? Color.white.opacity(0.18) : Color.white.opacity(0.10))
                 )
                 .overlay(
-                    Circle().stroke(GrayPalette.hairline, lineWidth: 1)
+                    Circle().stroke(PanelPalette.hairline, lineWidth: 1)
                 )
                 .scaleEffect(hovering ? 1.04 : 1.0)
         }

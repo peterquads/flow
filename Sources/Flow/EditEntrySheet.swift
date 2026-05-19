@@ -134,40 +134,29 @@ struct EditEntrySheet: View {
     // MARK: - Interval list (only when multiple)
 
     private var intervalList: some View {
-        VStack(alignment: .leading, spacing: 6 * fontScale) {
-            Text("ENTRIES")
-                .font(.mono(9 * fontScale, weight: .semibold))
-                .tracking(1.5)
-                .foregroundColor(GrayPalette.muted)
-                .padding(.top, 18 * fontScale)
-            VStack(spacing: 4 * fontScale) {
-                ForEach(refs) { ref in
-                    intervalRow(ref)
-                }
+        VStack(spacing: 4 * fontScale) {
+            ForEach(refs) { ref in
+                intervalRow(ref)
             }
-            .padding(.bottom, 14 * fontScale)
         }
+        .padding(.vertical, 16 * fontScale)
     }
 
     private func intervalRow(_ ref: AppStore.IntervalRef) -> some View {
         let selected = ref.id == selectedID
         let isOpen = ref.end == nil
         return Button(action: { select(ref) }) {
-            HStack(spacing: 10 * fontScale) {
-                Text(intervalLineFormatter.string(from: ref.start))
+            HStack(spacing: 12 * fontScale) {
+                Text(SharedFormatters.intervalShort.string(from: ref.start))
                     .font(.mono(12 * fontScale))
-                    .foregroundColor(GrayPalette.textSecondary)
+                    .foregroundColor(selected ? GrayPalette.charcoal : GrayPalette.textSecondary)
                 Image(systemName: "arrow.right")
                     .font(.system(size: 9 * fontScale, weight: .medium))
                     .foregroundColor(GrayPalette.muted)
-                Text(ref.end.map { intervalLineFormatter.string(from: $0) } ?? "now")
+                Text(ref.end.map { SharedFormatters.intervalShort.string(from: $0) } ?? "now")
                     .font(.mono(12 * fontScale))
-                    .foregroundColor(GrayPalette.textSecondary)
+                    .foregroundColor(selected ? GrayPalette.charcoal : GrayPalette.textSecondary)
                 Spacer()
-                Text(formatDurationLabel(intervalMinutes(ref)))
-                    .font(.mono(11 * fontScale, weight: .semibold))
-                    .foregroundColor(selected ? GrayPalette.charcoal : GrayPalette.muted)
-                    .monospacedDigit()
                 if isOpen {
                     Text("LIVE")
                         .font(.mono(8 * fontScale, weight: .semibold))
@@ -177,17 +166,16 @@ struct EditEntrySheet: View {
                         .padding(.vertical, 2)
                         .background(Capsule().fill(GrayPalette.charcoal))
                 }
+                Text(formatDurationLabel(intervalMinutes(ref)))
+                    .font(.mono(11 * fontScale, weight: .semibold))
+                    .foregroundColor(selected ? GrayPalette.charcoal : GrayPalette.muted)
+                    .monospacedDigit()
             }
             .padding(.horizontal, 12 * fontScale)
-            .padding(.vertical, 10 * fontScale)
+            .padding(.vertical, 9 * fontScale)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(selected ? GrayPalette.creamDeep.opacity(0.7) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(selected ? GrayPalette.charcoal.opacity(0.25) : GrayPalette.hairline.opacity(0.6),
-                            lineWidth: 1)
+                    .fill(selected ? GrayPalette.creamDeep.opacity(0.55) : Color.clear)
             )
             .contentShape(Rectangle())
         }
@@ -204,41 +192,65 @@ struct EditEntrySheet: View {
     // MARK: - Endpoints
 
     private var endpointsBlock: some View {
-        HStack(alignment: .bottom, spacing: 16 * fontScale) {
-            endpointButton(.start)
-            middleDuration
-            endpointButton(.end)
+        VStack(spacing: 14 * fontScale) {
+            dateHeader
+            HStack(alignment: .center, spacing: 24 * fontScale) {
+                endpointTime(.start)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 16 * fontScale, weight: .regular))
+                    .foregroundColor(GrayPalette.muted)
+                endpointTime(.end)
+            }
+            .frame(maxWidth: .infinity)
+            durationBadge
         }
-        .padding(.vertical, 20 * fontScale)
+        .padding(.vertical, 22 * fontScale)
     }
 
-    private func endpointButton(_ endpoint: Endpoint) -> some View {
+    @ViewBuilder
+    private var dateHeader: some View {
+        let cal = Calendar.current
+        let sameDay = cal.isDate(draftStart, inSameDayAs: draftEnd)
+        if sameDay {
+            Text(SharedFormatters.longDate.string(from: draftStart))
+                .font(.emilio(.regular, size: 14 * fontScale))
+                .foregroundColor(GrayPalette.textSecondary)
+                .frame(maxWidth: .infinity)
+        } else {
+            HStack(spacing: 8) {
+                Text(SharedFormatters.dayMonth.string(from: draftStart))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 10 * fontScale, weight: .medium))
+                Text(SharedFormatters.dayMonth.string(from: draftEnd))
+            }
+            .font(.emilio(.regular, size: 13 * fontScale))
+            .foregroundColor(GrayPalette.textSecondary)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func endpointTime(_ endpoint: Endpoint) -> some View {
         let date = endpoint == .start ? draftStart : draftEnd
         let isOpen = openPicker == endpoint
-        let label = endpoint == .start ? "STARTED" : "ENDED"
+        let cal = Calendar.current
+        let h24 = cal.component(.hour, from: date)
+        let m = cal.component(.minute, from: date)
+        let h12 = h24 == 0 ? 12 : (h24 > 12 ? h24 - 12 : h24)
+        let suffix = h24 >= 12 ? "PM" : "AM"
 
         return Button(action: { toggle(endpoint) }) {
-            VStack(alignment: .leading, spacing: 6 * fontScale) {
-                HStack(spacing: 6) {
-                    Text(label)
-                        .font(.mono(9 * fontScale, weight: .semibold))
-                        .tracking(1.5)
-                        .foregroundColor(GrayPalette.muted)
-                    Image(systemName: isOpen ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 7 * fontScale, weight: .semibold))
-                        .foregroundColor(GrayPalette.muted)
-                }
-                Text(dateLineFormatter.string(from: date))
-                    .font(.mono(11 * fontScale))
-                    .foregroundColor(GrayPalette.textSecondary)
-                Text(timeLineFormatter.string(from: date))
-                    .font(.emilio(.semibold, size: 26 * fontScale))
+            HStack(alignment: .lastTextBaseline, spacing: 6 * fontScale) {
+                Text(String(format: "%d:%02d", h12, m))
+                    .font(.emilio(.semibold, size: 34 * fontScale))
                     .foregroundColor(GrayPalette.charcoal)
                     .monospacedDigit()
+                Text(suffix)
+                    .font(.mono(11 * fontScale, weight: .semibold))
+                    .tracking(1)
+                    .foregroundColor(GrayPalette.muted)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14 * fontScale)
-            .padding(.vertical, 12 * fontScale)
+            .padding(.horizontal, 16 * fontScale)
+            .padding(.vertical, 10 * fontScale)
             .background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(isOpen ? GrayPalette.creamDeep.opacity(0.7) : Color.clear)
@@ -248,19 +260,15 @@ struct EditEntrySheet: View {
         .buttonStyle(.plain)
     }
 
-    private var middleDuration: some View {
-        VStack(spacing: 4 * fontScale) {
-            Text(formatDurationLabel(durationMinutes))
-                .font(.mono(10 * fontScale, weight: .semibold))
-                .tracking(0.5)
-                .foregroundColor(GrayPalette.muted)
-                .monospacedDigit()
-            Image(systemName: "arrow.right")
-                .font(.system(size: 13 * fontScale, weight: .medium))
-                .foregroundColor(GrayPalette.textSecondary)
-        }
-        .padding(.bottom, 18 * fontScale)
-        .fixedSize()
+    private var durationBadge: some View {
+        Text(formatDurationLabel(durationMinutes))
+            .font(.mono(10 * fontScale, weight: .semibold))
+            .tracking(1)
+            .foregroundColor(GrayPalette.muted)
+            .monospacedDigit()
+            .padding(.horizontal, 14 * fontScale)
+            .padding(.vertical, 5 * fontScale)
+            .background(Capsule().fill(GrayPalette.creamDeep.opacity(0.55)))
     }
 
     private func toggle(_ endpoint: Endpoint) {
@@ -289,35 +297,29 @@ struct EditEntrySheet: View {
     // MARK: - Quick chips
 
     private var quickChipsBlock: some View {
-        VStack(alignment: .leading, spacing: 12 * fontScale) {
-            Text("DURATION")
-                .font(.mono(9 * fontScale, weight: .semibold))
-                .tracking(1.5)
-                .foregroundColor(GrayPalette.muted)
-            HStack(spacing: 6 * fontScale) {
-                ForEach(quickDurations, id: \.self) { m in
-                    let selected = m == durationMinutes
-                    Button(action: {
-                        draftEnd = draftStart.addingTimeInterval(TimeInterval(m * 60))
-                        if draftEnd > Date() {
-                            draftEnd = Date()
-                            draftStart = draftEnd.addingTimeInterval(TimeInterval(-m * 60))
-                        }
-                    }) {
-                        Text(formatChipLabel(m))
-                            .font(.mono(11 * fontScale, weight: .medium))
-                            .foregroundColor(selected ? GrayPalette.cream : GrayPalette.textSecondary)
-                            .padding(.horizontal, 12 * fontScale)
-                            .padding(.vertical, 6 * fontScale)
-                            .background(Capsule().fill(selected ? GrayPalette.charcoal : Color.clear))
-                            .overlay(Capsule().stroke(GrayPalette.hairline, lineWidth: selected ? 0 : 1))
+        HStack(spacing: 6 * fontScale) {
+            ForEach(quickDurations, id: \.self) { m in
+                let selected = m == durationMinutes
+                Button(action: {
+                    draftEnd = draftStart.addingTimeInterval(TimeInterval(m * 60))
+                    if draftEnd > Date() {
+                        draftEnd = Date()
+                        draftStart = draftEnd.addingTimeInterval(TimeInterval(-m * 60))
                     }
-                    .buttonStyle(.plain)
+                }) {
+                    Text(formatChipLabel(m))
+                        .font(.mono(11 * fontScale, weight: .medium))
+                        .foregroundColor(selected ? GrayPalette.cream : GrayPalette.textSecondary)
+                        .padding(.horizontal, 12 * fontScale)
+                        .padding(.vertical, 6 * fontScale)
+                        .background(Capsule().fill(selected ? GrayPalette.charcoal : Color.clear))
+                        .overlay(Capsule().stroke(GrayPalette.hairline, lineWidth: selected ? 0 : 1))
                 }
-                Spacer()
+                .buttonStyle(.plain)
             }
+            Spacer()
         }
-        .padding(.vertical, 18 * fontScale)
+        .padding(.vertical, 14 * fontScale)
     }
 
     // MARK: - Actions

@@ -134,44 +134,68 @@ struct ManualEntrySheet: View {
         }
     }
 
-    // MARK: - Endpoints row (Started / → / Ended)
+    // MARK: - Endpoints row
 
     private var endpointsBlock: some View {
-        HStack(alignment: .bottom, spacing: 16 * fontScale) {
-            endpointButton(.start)
-            middleDuration
-            endpointButton(.end)
+        VStack(spacing: 14 * fontScale) {
+            dateHeader
+            HStack(alignment: .center, spacing: 24 * fontScale) {
+                endpointTime(.start)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 16 * fontScale, weight: .regular))
+                    .foregroundColor(GrayPalette.muted)
+                endpointTime(.end)
+            }
+            .frame(maxWidth: .infinity)
+            durationBadge
         }
-        .padding(.vertical, 20 * fontScale)
+        .padding(.vertical, 22 * fontScale)
     }
 
-    private func endpointButton(_ endpoint: Endpoint) -> some View {
+    @ViewBuilder
+    private var dateHeader: some View {
+        let cal = Calendar.current
+        let sameDay = cal.isDate(startDate, inSameDayAs: endDate)
+        if sameDay {
+            Text(SharedFormatters.longDate.string(from: startDate))
+                .font(.emilio(.regular, size: 14 * fontScale))
+                .foregroundColor(GrayPalette.textSecondary)
+                .frame(maxWidth: .infinity)
+        } else {
+            HStack(spacing: 8) {
+                Text(SharedFormatters.dayMonth.string(from: startDate))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 10 * fontScale, weight: .medium))
+                Text(SharedFormatters.dayMonth.string(from: endDate))
+            }
+            .font(.emilio(.regular, size: 13 * fontScale))
+            .foregroundColor(GrayPalette.textSecondary)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func endpointTime(_ endpoint: Endpoint) -> some View {
         let date = endpoint == .start ? startDate : endDate
         let isOpen = openPicker == endpoint
-        let label = endpoint == .start ? "STARTED" : "ENDED"
+        let cal = Calendar.current
+        let h24 = cal.component(.hour, from: date)
+        let m = cal.component(.minute, from: date)
+        let h12 = h24 == 0 ? 12 : (h24 > 12 ? h24 - 12 : h24)
+        let suffix = h24 >= 12 ? "PM" : "AM"
 
         return Button(action: { toggle(endpoint) }) {
-            VStack(alignment: .leading, spacing: 6 * fontScale) {
-                HStack(spacing: 6) {
-                    Text(label)
-                        .font(.mono(9 * fontScale, weight: .semibold))
-                        .tracking(1.5)
-                        .foregroundColor(GrayPalette.muted)
-                    Image(systemName: isOpen ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 7 * fontScale, weight: .semibold))
-                        .foregroundColor(GrayPalette.muted)
-                }
-                Text(dateLineFormatter.string(from: date))
-                    .font(.mono(11 * fontScale))
-                    .foregroundColor(GrayPalette.textSecondary)
-                Text(timeLineFormatter.string(from: date))
-                    .font(.emilio(.semibold, size: 26 * fontScale))
+            HStack(alignment: .lastTextBaseline, spacing: 6 * fontScale) {
+                Text(String(format: "%d:%02d", h12, m))
+                    .font(.emilio(.semibold, size: 34 * fontScale))
                     .foregroundColor(GrayPalette.charcoal)
                     .monospacedDigit()
+                Text(suffix)
+                    .font(.mono(11 * fontScale, weight: .semibold))
+                    .tracking(1)
+                    .foregroundColor(GrayPalette.muted)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14 * fontScale)
-            .padding(.vertical, 12 * fontScale)
+            .padding(.horizontal, 16 * fontScale)
+            .padding(.vertical, 10 * fontScale)
             .background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(isOpen ? GrayPalette.creamDeep.opacity(0.7) : Color.clear)
@@ -181,19 +205,15 @@ struct ManualEntrySheet: View {
         .buttonStyle(.plain)
     }
 
-    private var middleDuration: some View {
-        VStack(spacing: 4 * fontScale) {
-            Text(formatDurationLabel(durationMinutes))
-                .font(.mono(10 * fontScale, weight: .semibold))
-                .tracking(0.5)
-                .foregroundColor(GrayPalette.muted)
-                .monospacedDigit()
-            Image(systemName: "arrow.right")
-                .font(.system(size: 13 * fontScale, weight: .medium))
-                .foregroundColor(GrayPalette.textSecondary)
-        }
-        .padding(.bottom, 18 * fontScale)
-        .fixedSize()
+    private var durationBadge: some View {
+        Text(formatDurationLabel(durationMinutes))
+            .font(.mono(10 * fontScale, weight: .semibold))
+            .tracking(1)
+            .foregroundColor(GrayPalette.muted)
+            .monospacedDigit()
+            .padding(.horizontal, 14 * fontScale)
+            .padding(.vertical, 5 * fontScale)
+            .background(Capsule().fill(GrayPalette.creamDeep.opacity(0.55)))
     }
 
     private func toggle(_ endpoint: Endpoint) {
@@ -224,32 +244,29 @@ struct ManualEntrySheet: View {
     // MARK: - Quick chips
 
     private var quickChipsBlock: some View {
-        VStack(alignment: .leading, spacing: 12 * fontScale) {
-            Text("DURATION")
-                .font(.mono(9 * fontScale, weight: .semibold))
-                .tracking(1.5)
-                .foregroundColor(GrayPalette.muted)
-            HStack(spacing: 6 * fontScale) {
-                ForEach(quickDurations, id: \.self) { m in
-                    let selected = m == durationMinutes
-                    Button(action: {
-                        endDate = startDate.addingTimeInterval(TimeInterval(m * 60))
-                        if endDate > Date() { endDate = Date(); startDate = endDate.addingTimeInterval(TimeInterval(-m * 60)) }
-                    }) {
-                        Text(formatChipLabel(m))
-                            .font(.mono(11 * fontScale, weight: .medium))
-                            .foregroundColor(selected ? GrayPalette.cream : GrayPalette.textSecondary)
-                            .padding(.horizontal, 12 * fontScale)
-                            .padding(.vertical, 6 * fontScale)
-                            .background(Capsule().fill(selected ? GrayPalette.charcoal : Color.clear))
-                            .overlay(Capsule().stroke(GrayPalette.hairline, lineWidth: selected ? 0 : 1))
+        HStack(spacing: 6 * fontScale) {
+            ForEach(quickDurations, id: \.self) { m in
+                let selected = m == durationMinutes
+                Button(action: {
+                    endDate = startDate.addingTimeInterval(TimeInterval(m * 60))
+                    if endDate > Date() {
+                        endDate = Date()
+                        startDate = endDate.addingTimeInterval(TimeInterval(-m * 60))
                     }
-                    .buttonStyle(.plain)
+                }) {
+                    Text(formatChipLabel(m))
+                        .font(.mono(11 * fontScale, weight: .medium))
+                        .foregroundColor(selected ? GrayPalette.cream : GrayPalette.textSecondary)
+                        .padding(.horizontal, 12 * fontScale)
+                        .padding(.vertical, 6 * fontScale)
+                        .background(Capsule().fill(selected ? GrayPalette.charcoal : Color.clear))
+                        .overlay(Capsule().stroke(GrayPalette.hairline, lineWidth: selected ? 0 : 1))
                 }
-                Spacer()
+                .buttonStyle(.plain)
             }
+            Spacer()
         }
-        .padding(.vertical, 18 * fontScale)
+        .padding(.vertical, 14 * fontScale)
     }
 
     // MARK: - Actions
@@ -357,7 +374,7 @@ private struct CalendarGrid: View {
             navButton("chevron.left") { changeMonth(by: -1) }
             Spacer()
             Text(monthLabelFormatter.string(from: visibleMonth))
-                .font(.emilio(.semibold, size: 14 * fontScale))
+                .font(.emilio(.semibold, size: 16 * fontScale))
                 .foregroundColor(GrayPalette.charcoal)
             Spacer()
             navButton("chevron.right") { changeMonth(by: 1) }
@@ -380,10 +397,10 @@ private struct CalendarGrid: View {
         return HStack(spacing: 2 * fontScale) {
             ForEach(0..<7, id: \.self) { i in
                 Text(symbols[i])
-                    .font(.mono(9 * fontScale, weight: .semibold))
+                    .font(.mono(10 * fontScale, weight: .semibold))
                     .tracking(1)
                     .foregroundColor(GrayPalette.muted)
-                    .frame(width: 32 * fontScale)
+                    .frame(width: 36 * fontScale)
             }
         }
     }
@@ -421,9 +438,9 @@ private struct CalendarGrid: View {
                     RoundedRectangle(cornerRadius: 6)
                         .fill(GrayPalette.creamDeep)
                 }
-                VStack(spacing: 1) {
+                VStack(spacing: 2) {
                     Text("\(calendar.component(.day, from: day))")
-                        .font(.mono(12 * fontScale, weight: isSelected ? .semibold : .regular))
+                        .font(.mono(14 * fontScale, weight: isSelected ? .semibold : .regular))
                         .foregroundColor(
                             isSelected ? GrayPalette.cream
                             : disabled ? GrayPalette.muted.opacity(0.4)
@@ -442,7 +459,7 @@ private struct CalendarGrid: View {
                     }
                 }
             }
-            .frame(width: 32 * fontScale, height: 32 * fontScale)
+            .frame(width: 36 * fontScale, height: 36 * fontScale)
         }
         .buttonStyle(.plain)
         .disabled(disabled)

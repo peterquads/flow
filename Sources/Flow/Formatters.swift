@@ -4,6 +4,7 @@ import Foundation
 /// instances so we don't allocate one per body render or per tooltip frame.
 enum SharedFormatters {
     static let dayMonth: DateFormatter = make("EEE, MMM d")
+    static let longDate: DateFormatter = make("EEEE, MMMM d")
     static let time12: DateFormatter = make("h:mm a")
     static let monthYear: DateFormatter = make("MMMM yyyy")
     static let intervalShort: DateFormatter = make("EEE h:mm a")

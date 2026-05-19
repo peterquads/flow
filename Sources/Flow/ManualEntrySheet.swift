@@ -174,15 +174,30 @@ struct ManualEntrySheet: View {
         }
     }
 
+    @ViewBuilder
     private func endpointTime(_ endpoint: Endpoint) -> some View {
-        let date = endpoint == .start ? startDate : endDate
         let isOpen = openPicker == endpoint
+        if isOpen {
+            TimeNumeralsEditor(date: bindingFor(endpoint), fontScale: fontScale)
+                .padding(.horizontal, 16 * fontScale)
+                .padding(.vertical, 10 * fontScale)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(GrayPalette.creamDeep.opacity(0.7))
+                )
+        } else {
+            staticEndpointTime(endpoint)
+        }
+    }
+
+    private func staticEndpointTime(_ endpoint: Endpoint) -> some View {
+        let date = endpoint == .start ? startDate : endDate
         let cal = Calendar.current
         let h24 = cal.component(.hour, from: date)
         let m = cal.component(.minute, from: date)
         let uses24h = Locale.current.uses24HourTime
 
-        return Button(action: { toggle(endpoint) }) {
+        return Button(action: { openPicker = endpoint }) {
             HStack(alignment: .lastTextBaseline, spacing: 6 * fontScale) {
                 Text(uses24h
                      ? String(format: "%02d:%02d", h24, m)
@@ -199,13 +214,21 @@ struct ManualEntrySheet: View {
             }
             .padding(.horizontal, 16 * fontScale)
             .padding(.vertical, 10 * fontScale)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isOpen ? GrayPalette.creamDeep.opacity(0.7) : Color.clear)
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func bindingFor(_ endpoint: Endpoint) -> Binding<Date> {
+        endpoint == .start
+            ? Binding(get: { startDate }, set: { newValue in
+                startDate = newValue
+                if endDate < startDate { endDate = startDate.addingTimeInterval(30 * 60) }
+            })
+            : Binding(get: { endDate }, set: { newValue in
+                endDate = newValue
+                if endDate < startDate { startDate = endDate.addingTimeInterval(-30 * 60) }
+            })
     }
 
     private var durationBadge: some View {
@@ -227,16 +250,9 @@ struct ManualEntrySheet: View {
 
     @ViewBuilder
     private func inlinePicker(_ endpoint: Endpoint) -> some View {
-        InlineDateTimePicker(
-            date: endpoint == .start
-                ? Binding(get: { startDate }, set: { newValue in
-                    startDate = newValue
-                    if endDate < startDate { endDate = startDate.addingTimeInterval(30 * 60) }
-                })
-                : Binding(get: { endDate }, set: { newValue in
-                    endDate = newValue
-                    if endDate < startDate { startDate = endDate.addingTimeInterval(-30 * 60) }
-                }),
+        // Date-only picker — the time is edited inline in the endpoint card itself.
+        CalendarGrid(
+            date: bindingFor(endpoint),
             fontScale: fontScale,
             allowFuture: false
         )
@@ -334,24 +350,9 @@ struct ManualEntrySheet: View {
     }
 }
 
-// MARK: - InlineDateTimePicker (calendar grid + minimal time input)
-
-struct InlineDateTimePicker: View {
-    @Binding var date: Date
-    let fontScale: CGFloat
-    let allowFuture: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14 * fontScale) {
-            CalendarGrid(date: $date, fontScale: fontScale, allowFuture: allowFuture)
-            MinimalTimeField(date: $date, fontScale: fontScale)
-        }
-    }
-}
-
 // MARK: - CalendarGrid
 
-private struct CalendarGrid: View {
+struct CalendarGrid: View {
     @Binding var date: Date
     let fontScale: CGFloat
     let allowFuture: Bool
@@ -502,135 +503,6 @@ private struct CalendarGrid: View {
     }
 
     private var monthLabelFormatter: DateFormatter { SharedFormatters.monthYear }
-}
-
-// MARK: - MinimalTimeField (HH : MM  AM/PM, borderless)
-
-private struct MinimalTimeField: View {
-    @Binding var date: Date
-    let fontScale: CGFloat
-
-    @State private var hourText: String = ""
-    @State private var minuteText: String = ""
-    @FocusState private var focused: Field?
-
-    private enum Field { case hour, minute }
-
-    private var calendar: Calendar { Calendar.current }
-    private var uses24h: Bool { Locale.current.uses24HourTime }
-    private var hour24: Int { calendar.component(.hour, from: date) }
-    private var minute: Int { calendar.component(.minute, from: date) }
-    private var hour12: Int { let h = hour24 % 12; return h == 0 ? 12 : h }
-    private var isPM: Bool { hour24 >= 12 }
-    private var displayedHour: Int { uses24h ? hour24 : hour12 }
-    private var hourPlaceholder: String { uses24h ? "00" : "12" }
-
-    var body: some View {
-        HStack(spacing: 10 * fontScale) {
-            digitField($hourText, placeholder: hourPlaceholder, focus: .hour) { text in
-                if let i = Int(text) {
-                    if uses24h, i >= 0 && i <= 23 {
-                        setHour24(i, minute: minute)
-                    } else if !uses24h, i >= 1 && i <= 12 {
-                        setTime(hour12: i, minute: minute, isPM: isPM)
-                    }
-                }
-                hourText = String(format: uses24h ? "%02d" : "%d", displayedHour)
-            }
-            .frame(width: 44 * fontScale)
-
-            Text(":")
-                .font(.emilio(.semibold, size: 22 * fontScale))
-                .foregroundColor(GrayPalette.muted)
-
-            digitField($minuteText, placeholder: "00", focus: .minute) { text in
-                if let i = Int(text), i >= 0 && i <= 59 {
-                    if uses24h {
-                        setHour24(hour24, minute: i)
-                    } else {
-                        setTime(hour12: hour12, minute: i, isPM: isPM)
-                    }
-                }
-                minuteText = String(format: "%02d", minute)
-            }
-            .frame(width: 50 * fontScale)
-
-            if !uses24h {
-                ampmToggle
-            }
-            Spacer()
-        }
-        .onAppear { syncFields() }
-        .onChange(of: date) { _, _ in syncFields() }
-    }
-
-    private func digitField(_ binding: Binding<String>, placeholder: String,
-                            focus: Field, onCommit: @escaping (String) -> Void) -> some View {
-        TextField(placeholder, text: binding)
-            .textFieldStyle(.plain)
-            .font(.emilio(.semibold, size: 22 * fontScale))
-            .foregroundColor(GrayPalette.charcoal)
-            .monospacedDigit()
-            .multilineTextAlignment(.center)
-            .focused($focused, equals: focus)
-            .onSubmit { onCommit(binding.wrappedValue) }
-            .onChange(of: binding.wrappedValue) { _, new in
-                // Strip non-digits and clamp to 2 chars.
-                let filtered = String(new.filter { $0.isNumber }.prefix(2))
-                if filtered != new { binding.wrappedValue = filtered }
-            }
-            .onChange(of: focused) { old, _ in
-                if old == focus { onCommit(binding.wrappedValue) }
-            }
-            .padding(.vertical, 6)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(focused == focus ? GrayPalette.charcoal : GrayPalette.hairline)
-                    .frame(height: focused == focus ? 1.5 : 1)
-                    .animation(.easeOut(duration: 0.12), value: focused)
-            }
-    }
-
-    private var ampmToggle: some View {
-        HStack(spacing: 4) {
-            ampmBtn("AM", selected: !isPM) { setTime(hour12: hour12, minute: minute, isPM: false) }
-            ampmBtn("PM", selected: isPM) { setTime(hour12: hour12, minute: minute, isPM: true) }
-        }
-    }
-
-    private func ampmBtn(_ label: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.mono(11 * fontScale, weight: .semibold))
-                .foregroundColor(selected ? GrayPalette.cream : GrayPalette.textSecondary)
-                .padding(.horizontal, 12 * fontScale)
-                .padding(.vertical, 7 * fontScale)
-                .background(Capsule().fill(selected ? GrayPalette.charcoal : Color.clear))
-                .overlay(Capsule().stroke(GrayPalette.hairline, lineWidth: selected ? 0 : 1))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func setTime(hour12: Int, minute: Int, isPM: Bool) {
-        var hour24 = hour12 % 12
-        if isPM { hour24 += 12 }
-        setHour24(hour24, minute: minute)
-    }
-
-    private func setHour24(_ h24: Int, minute: Int) {
-        var comps = calendar.dateComponents([.year, .month, .day], from: date)
-        comps.hour = h24
-        comps.minute = minute
-        comps.second = 0
-        if let d = calendar.date(from: comps) {
-            date = d
-        }
-    }
-
-    private func syncFields() {
-        hourText = String(format: uses24h ? "%02d" : "%d", displayedHour)
-        minuteText = String(format: "%02d", minute)
-    }
 }
 
 private extension Array {

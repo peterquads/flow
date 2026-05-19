@@ -234,15 +234,30 @@ struct EditEntrySheet: View {
         }
     }
 
+    @ViewBuilder
     private func endpointTime(_ endpoint: Endpoint) -> some View {
-        let date = endpoint == .start ? draftStart : draftEnd
         let isOpen = openPicker == endpoint
+        if isOpen {
+            TimeNumeralsEditor(date: bindingFor(endpoint), fontScale: fontScale)
+                .padding(.horizontal, 16 * fontScale)
+                .padding(.vertical, 10 * fontScale)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(GrayPalette.creamDeep.opacity(0.7))
+                )
+        } else {
+            staticEndpointTime(endpoint)
+        }
+    }
+
+    private func staticEndpointTime(_ endpoint: Endpoint) -> some View {
+        let date = endpoint == .start ? draftStart : draftEnd
         let cal = Calendar.current
         let h24 = cal.component(.hour, from: date)
         let m = cal.component(.minute, from: date)
         let uses24h = Locale.current.uses24HourTime
 
-        return Button(action: { toggle(endpoint) }) {
+        return Button(action: { openPicker = endpoint }) {
             HStack(alignment: .lastTextBaseline, spacing: 6 * fontScale) {
                 Text(uses24h
                      ? String(format: "%02d:%02d", h24, m)
@@ -259,13 +274,21 @@ struct EditEntrySheet: View {
             }
             .padding(.horizontal, 16 * fontScale)
             .padding(.vertical, 10 * fontScale)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isOpen ? GrayPalette.creamDeep.opacity(0.7) : Color.clear)
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func bindingFor(_ endpoint: Endpoint) -> Binding<Date> {
+        endpoint == .start
+            ? Binding(get: { draftStart }, set: { newValue in
+                draftStart = newValue
+                if draftEnd < draftStart { draftEnd = draftStart.addingTimeInterval(30 * 60) }
+            })
+            : Binding(get: { draftEnd }, set: { newValue in
+                draftEnd = newValue
+                if draftEnd < draftStart { draftStart = draftEnd.addingTimeInterval(-30 * 60) }
+            })
     }
 
     private var durationBadge: some View {
@@ -285,16 +308,9 @@ struct EditEntrySheet: View {
 
     @ViewBuilder
     private func inlinePicker(_ endpoint: Endpoint) -> some View {
-        InlineDateTimePicker(
-            date: endpoint == .start
-                ? Binding(get: { draftStart }, set: { newValue in
-                    draftStart = newValue
-                    if draftEnd < draftStart { draftEnd = draftStart.addingTimeInterval(30 * 60) }
-                })
-                : Binding(get: { draftEnd }, set: { newValue in
-                    draftEnd = newValue
-                    if draftEnd < draftStart { draftStart = draftEnd.addingTimeInterval(-30 * 60) }
-                }),
+        // Date-only picker — the time is edited inline in the endpoint card itself.
+        CalendarGrid(
+            date: bindingFor(endpoint),
             fontScale: fontScale,
             allowFuture: false
         )

@@ -34,10 +34,13 @@ struct MenuBarPanel: View {
     var body: some View {
         ZStack {
             BlurView(
-                material: .hudWindow,
+                material: .menu,
                 blending: .behindWindow,
                 forcedAppearance: .vibrantDark
             )
+            // Subtle dark wash to keep contrast with bright wallpapers
+            // showing through without losing the see-through feel.
+            Color.black.opacity(0.08)
             VStack(alignment: .leading, spacing: 12) {
                 if let current = store.currentTask {
                     runningStrip(current)

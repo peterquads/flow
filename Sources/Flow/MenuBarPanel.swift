@@ -29,6 +29,7 @@ struct MenuBarPanel: View {
                     suggestionList
                 }
                 divider
+                quoteBlock
                 footer
             }
             .padding(.horizontal, 14)
@@ -166,6 +167,22 @@ struct MenuBarPanel: View {
         Rectangle()
             .fill(GrayPalette.hairline)
             .frame(height: 1)
+    }
+
+    private var quoteBlock: some View {
+        let q = Quotes.today()
+        return VStack(alignment: .leading, spacing: 5) {
+            Text("\u{201C}\(q.text)\u{201D}")
+                .font(.custom("EmilioTest-RegularItalic", size: 12))
+                .foregroundColor(GrayPalette.textSecondary)
+                .lineLimit(5)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(q.author.uppercased())
+                .font(.mono(9, weight: .semibold))
+                .tracking(1.8)
+                .foregroundColor(GrayPalette.muted)
+        }
+        .padding(.bottom, 2)
     }
 
     private var footer: some View {

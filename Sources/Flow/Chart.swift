@@ -383,7 +383,7 @@ struct FlowBarChart: View {
 
     private func bucketLabel(_ date: Date) -> String {
         switch range {
-        case .day: return SharedFormatters.bucketHour.string(from: date)
+        case .day: return date.formatted(.dateTime.hour())  // respects 12h/24h system pref
         case .week, .month: return SharedFormatters.bucketDay.string(from: date)
         case .quarter: return SharedFormatters.bucketWeek.string(from: date)
         }

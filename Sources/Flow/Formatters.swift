@@ -5,11 +5,8 @@ import Foundation
 enum SharedFormatters {
     static let dayMonth: DateFormatter = make("EEE, MMM d")
     static let longDate: DateFormatter = make("EEEE, MMMM d")
-    static let time12: DateFormatter = make("h:mm a")
     static let monthYear: DateFormatter = make("MMMM yyyy")
-    static let intervalShort: DateFormatter = make("EEE h:mm a")
     static let dayKey: DateFormatter = make("yyyy-MM-dd")
-    static let bucketHour: DateFormatter = make("ha")
     static let bucketDay: DateFormatter = make("EEE d MMM")
     static let bucketWeek: DateFormatter = make("'Wk of' d MMM")
     static let csvLocal: DateFormatter = {
@@ -23,5 +20,18 @@ enum SharedFormatters {
         f.locale = Locale.autoupdatingCurrent
         f.dateFormat = format
         return f
+    }
+}
+
+extension Locale {
+    /// Mirrors System Settings → General → Date & Time → "24-Hour Time".
+    /// Used everywhere we render a wall-clock time so the whole tool follows
+    /// the user's system preference.
+    var uses24HourTime: Bool {
+        switch hourCycle {
+        case .zeroToTwentyThree, .oneToTwentyFour: return true
+        case .zeroToEleven, .oneToTwelve: return false
+        @unknown default: return false
+        }
     }
 }

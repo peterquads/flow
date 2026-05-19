@@ -180,19 +180,22 @@ struct ManualEntrySheet: View {
         let cal = Calendar.current
         let h24 = cal.component(.hour, from: date)
         let m = cal.component(.minute, from: date)
-        let h12 = h24 == 0 ? 12 : (h24 > 12 ? h24 - 12 : h24)
-        let suffix = h24 >= 12 ? "PM" : "AM"
+        let uses24h = Locale.current.uses24HourTime
 
         return Button(action: { toggle(endpoint) }) {
             HStack(alignment: .lastTextBaseline, spacing: 6 * fontScale) {
-                Text(String(format: "%d:%02d", h12, m))
+                Text(uses24h
+                     ? String(format: "%02d:%02d", h24, m)
+                     : String(format: "%d:%02d", h24 == 0 ? 12 : (h24 > 12 ? h24 - 12 : h24), m))
                     .font(.emilio(.semibold, size: 34 * fontScale))
                     .foregroundColor(GrayPalette.charcoal)
                     .monospacedDigit()
-                Text(suffix)
-                    .font(.mono(11 * fontScale, weight: .semibold))
-                    .tracking(1)
-                    .foregroundColor(GrayPalette.muted)
+                if !uses24h {
+                    Text(h24 >= 12 ? "PM" : "AM")
+                        .font(.mono(11 * fontScale, weight: .semibold))
+                        .tracking(1)
+                        .foregroundColor(GrayPalette.muted)
+                }
             }
             .padding(.horizontal, 16 * fontScale)
             .padding(.vertical, 10 * fontScale)
@@ -313,8 +316,6 @@ struct ManualEntrySheet: View {
             .frame(height: 1)
     }
 
-    private var dateLineFormatter: DateFormatter { SharedFormatters.dayMonth }
-    private var timeLineFormatter: DateFormatter { SharedFormatters.time12 }
 
     private func formatDurationLabel(_ minutes: Int) -> String {
         let h = minutes / 60
@@ -516,18 +517,25 @@ private struct MinimalTimeField: View {
     private enum Field { case hour, minute }
 
     private var calendar: Calendar { Calendar.current }
+    private var uses24h: Bool { Locale.current.uses24HourTime }
     private var hour24: Int { calendar.component(.hour, from: date) }
     private var minute: Int { calendar.component(.minute, from: date) }
     private var hour12: Int { let h = hour24 % 12; return h == 0 ? 12 : h }
     private var isPM: Bool { hour24 >= 12 }
+    private var displayedHour: Int { uses24h ? hour24 : hour12 }
+    private var hourPlaceholder: String { uses24h ? "00" : "12" }
 
     var body: some View {
         HStack(spacing: 10 * fontScale) {
-            digitField($hourText, placeholder: "12", focus: .hour) { text in
-                if let i = Int(text), i >= 1 && i <= 12 {
-                    setTime(hour12: i, minute: minute, isPM: isPM)
+            digitField($hourText, placeholder: hourPlaceholder, focus: .hour) { text in
+                if let i = Int(text) {
+                    if uses24h, i >= 0 && i <= 23 {
+                        setHour24(i, minute: minute)
+                    } else if !uses24h, i >= 1 && i <= 12 {
+                        setTime(hour12: i, minute: minute, isPM: isPM)
+                    }
                 }
-                hourText = String(format: "%d", hour12)
+                hourText = String(format: uses24h ? "%02d" : "%d", displayedHour)
             }
             .frame(width: 44 * fontScale)
 
@@ -537,13 +545,19 @@ private struct MinimalTimeField: View {
 
             digitField($minuteText, placeholder: "00", focus: .minute) { text in
                 if let i = Int(text), i >= 0 && i <= 59 {
-                    setTime(hour12: hour12, minute: i, isPM: isPM)
+                    if uses24h {
+                        setHour24(hour24, minute: i)
+                    } else {
+                        setTime(hour12: hour12, minute: i, isPM: isPM)
+                    }
                 }
                 minuteText = String(format: "%02d", minute)
             }
             .frame(width: 50 * fontScale)
 
-            ampmToggle
+            if !uses24h {
+                ampmToggle
+            }
             Spacer()
         }
         .onAppear { syncFields() }
@@ -600,8 +614,12 @@ private struct MinimalTimeField: View {
     private func setTime(hour12: Int, minute: Int, isPM: Bool) {
         var hour24 = hour12 % 12
         if isPM { hour24 += 12 }
+        setHour24(hour24, minute: minute)
+    }
+
+    private func setHour24(_ h24: Int, minute: Int) {
         var comps = calendar.dateComponents([.year, .month, .day], from: date)
-        comps.hour = hour24
+        comps.hour = h24
         comps.minute = minute
         comps.second = 0
         if let d = calendar.date(from: comps) {
@@ -610,7 +628,7 @@ private struct MinimalTimeField: View {
     }
 
     private func syncFields() {
-        hourText = String(format: "%d", hour12)
+        hourText = String(format: uses24h ? "%02d" : "%d", displayedHour)
         minuteText = String(format: "%02d", minute)
     }
 }

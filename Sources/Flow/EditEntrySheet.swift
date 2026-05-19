@@ -147,13 +147,13 @@ struct EditEntrySheet: View {
         let isOpen = ref.end == nil
         return Button(action: { select(ref) }) {
             HStack(spacing: 12 * fontScale) {
-                Text(SharedFormatters.intervalShort.string(from: ref.start))
+                Text(formatIntervalEndpoint(ref.start))
                     .font(.mono(12 * fontScale))
                     .foregroundColor(selected ? GrayPalette.charcoal : GrayPalette.textSecondary)
                 Image(systemName: "arrow.right")
                     .font(.system(size: 9 * fontScale, weight: .medium))
                     .foregroundColor(GrayPalette.muted)
-                Text(ref.end.map { SharedFormatters.intervalShort.string(from: $0) } ?? "now")
+                Text(ref.end.map { formatIntervalEndpoint($0) } ?? "now")
                     .font(.mono(12 * fontScale))
                     .foregroundColor(selected ? GrayPalette.charcoal : GrayPalette.textSecondary)
                 Spacer()
@@ -187,6 +187,11 @@ struct EditEntrySheet: View {
     private func intervalMinutes(_ ref: AppStore.IntervalRef) -> Int {
         let end = ref.end ?? Date()
         return max(0, Int(end.timeIntervalSince(ref.start) / 60))
+    }
+
+    /// "Tue 3:45 PM" in 12h locales, "Tue 15:45" in 24h locales.
+    private func formatIntervalEndpoint(_ date: Date) -> String {
+        date.formatted(.dateTime.weekday(.abbreviated).hour().minute())
     }
 
     // MARK: - Endpoints
@@ -235,19 +240,22 @@ struct EditEntrySheet: View {
         let cal = Calendar.current
         let h24 = cal.component(.hour, from: date)
         let m = cal.component(.minute, from: date)
-        let h12 = h24 == 0 ? 12 : (h24 > 12 ? h24 - 12 : h24)
-        let suffix = h24 >= 12 ? "PM" : "AM"
+        let uses24h = Locale.current.uses24HourTime
 
         return Button(action: { toggle(endpoint) }) {
             HStack(alignment: .lastTextBaseline, spacing: 6 * fontScale) {
-                Text(String(format: "%d:%02d", h12, m))
+                Text(uses24h
+                     ? String(format: "%02d:%02d", h24, m)
+                     : String(format: "%d:%02d", h24 == 0 ? 12 : (h24 > 12 ? h24 - 12 : h24), m))
                     .font(.emilio(.semibold, size: 34 * fontScale))
                     .foregroundColor(GrayPalette.charcoal)
                     .monospacedDigit()
-                Text(suffix)
-                    .font(.mono(11 * fontScale, weight: .semibold))
-                    .tracking(1)
-                    .foregroundColor(GrayPalette.muted)
+                if !uses24h {
+                    Text(h24 >= 12 ? "PM" : "AM")
+                        .font(.mono(11 * fontScale, weight: .semibold))
+                        .tracking(1)
+                        .foregroundColor(GrayPalette.muted)
+                }
             }
             .padding(.horizontal, 16 * fontScale)
             .padding(.vertical, 10 * fontScale)
@@ -415,9 +423,6 @@ struct EditEntrySheet: View {
             .frame(height: 1)
     }
 
-    private var dateLineFormatter: DateFormatter { SharedFormatters.dayMonth }
-    private var timeLineFormatter: DateFormatter { SharedFormatters.time12 }
-    private var intervalLineFormatter: DateFormatter { SharedFormatters.intervalShort }
 
     private func formatDurationLabel(_ minutes: Int) -> String {
         let h = minutes / 60

@@ -28,12 +28,13 @@ extension Font {
 }
 
 enum EmilioWeight {
-    case regular, semibold, bold
+    case regular, semibold, bold, italic
     var familyName: String {
         switch self {
         case .regular:  return "EmilioTest"
         case .semibold: return "EmilioTest-Semibold"
         case .bold:     return "EmilioTest-Bold"
+        case .italic:   return "EmilioTest-RegularItalic"
         }
     }
 }

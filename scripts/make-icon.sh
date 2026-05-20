@@ -4,16 +4,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RES="$ROOT/Resources"
 SRC="$RES/icon-source.png"
 ICONSET="$RES/AppIcon.iconset"
-FONT="$RES/Fonts/EmilioTest-RegularItalic.otf"
 
-# 1. Generate the source PNG (italic F on cream, with manual skew amplification)
-python3 - <<PY
-from PIL import Image, ImageDraw, ImageFont
-import os
+# 1. Generate source PNG: enso (Japanese Zen brush circle) on cream.
+#    A single tapered stroke that doesn't quite close — wabi-sabi.
+python3 - "$SRC" <<'PY'
+from PIL import Image, ImageDraw
+import math, sys
 
+target = sys.argv[1]
 W = 1024
 CREAM = (250, 248, 245, 255)
-CHARCOAL = (26, 26, 26, 255)
+INK = (26, 26, 26, 255)
 HAIRLINE = (191, 191, 191, 90)
 
 img = Image.new("RGBA", (W, W), (0, 0, 0, 0))
@@ -21,33 +22,50 @@ d = ImageDraw.Draw(img)
 d.rounded_rectangle([(0, 0), (W, W)], radius=224, fill=CREAM)
 d.rounded_rectangle([(12, 12), (W - 12, W - 12)], radius=214, outline=HAIRLINE, width=2)
 
-# Render the F on a transparent oversized canvas, then shear it
-pad = 120
-canvas = Image.new("RGBA", (W + pad * 2, W + pad * 2), (0, 0, 0, 0))
-cd = ImageDraw.Draw(canvas)
-font = ImageFont.truetype("$FONT", 720)
-bbox = cd.textbbox((0, 0), "F", font=font)
-tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-ox = (canvas.size[0] - tw) // 2 - bbox[0]
-oy = (canvas.size[1] - th) // 2 - bbox[1]
-cd.text((ox, oy), "F", fill=CHARCOAL, font=font)
+# --- Enso parameters ---
+cx, cy = W / 2, W / 2
+radius = W * 0.33
+start_deg = 35          # brush entry point (clockwise from top)
+sweep_deg = 322         # leaves the classic open gap
+max_w = W * 0.075       # peak brush thickness
+end_w = W * 0.004       # taper to almost nothing at lift-off
 
-# Shear: PIL AFFINE expects the inverse transform, so (1, +alpha, -alpha*cy, ...) yields italic.
-alpha = 0.28
-cy = canvas.size[1] / 2
-canvas = canvas.transform(
-    canvas.size,
-    Image.Transform.AFFINE,
-    (1, alpha, -alpha * cy, 0, 1, 0),
-    resample=Image.BICUBIC,
-)
+# Trace an arc with variable stroke width; build a filled polygon.
+N = 360
+outer, inner = [], []
+for i in range(N + 1):
+    t = i / N
+    angle = math.radians(start_deg + sweep_deg * t - 90)
 
-fx = (img.size[0] - canvas.size[0]) // 2
-fy = (img.size[1] - canvas.size[1]) // 2 - 30
-img.alpha_composite(canvas, (fx, fy))
+    # Width profile along the stroke.
+    if t < 0.08:
+        # Quick rise from the brush touchdown.
+        w = max_w * (0.55 + 0.45 * (t / 0.08))
+    elif t < 0.75:
+        # Body — gentle thinning with brush wobble.
+        body_t = (t - 0.08) / 0.67
+        w = max_w * (1.0 - 0.15 * body_t)
+    else:
+        # Lift-off taper, eased.
+        lift_t = (t - 0.75) / 0.25
+        eased = lift_t * lift_t * (3 - 2 * lift_t)  # smoothstep
+        w = max_w * 0.85 * (1 - eased) + end_w * eased
 
-img.save("$SRC", "PNG")
-print("Wrote $SRC")
+    # Coherent brush wobble — multi-frequency for natural variation.
+    w *= 1 + 0.06 * math.sin(t * math.pi * 7) + 0.03 * math.sin(t * math.pi * 19)
+
+    px = cx + radius * math.cos(angle)
+    py = cy + radius * math.sin(angle)
+    nx = math.cos(angle)
+    ny = math.sin(angle)
+    outer.append((px + nx * w / 2, py + ny * w / 2))
+    inner.append((px - nx * w / 2, py - ny * w / 2))
+
+polygon = outer + list(reversed(inner))
+d.polygon(polygon, fill=INK)
+
+img.save(target, "PNG")
+print(f"Wrote {target}")
 PY
 
 # 2. iconset at all required sizes

@@ -36,6 +36,13 @@ chmod +x "$STAGE/Contents/MacOS/$APP"
 
 cp "$ROOT/Resources/Fonts/"*.otf "$STAGE/Contents/Resources/Fonts/"
 
+# Pre-rendered menu bar icon (cursive "F" at @1x and @2x).
+for f in MenuBarF.png "MenuBarF@2x.png"; do
+  if [ -f "$ROOT/Resources/$f" ]; then
+    cp "$ROOT/Resources/$f" "$STAGE/Contents/Resources/$f"
+  fi
+done
+
 if [ -f "$ROOT/Resources/AppIcon.icns" ]; then
   cp "$ROOT/Resources/AppIcon.icns" "$STAGE/Contents/Resources/AppIcon.icns"
 else

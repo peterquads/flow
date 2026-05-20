@@ -254,7 +254,7 @@ struct FlowBarChart: View {
             }
         }
         .chartPlotStyle { plot in
-            plot.background(.white)
+            plot.background(GrayPalette.cardSurface)
         }
         .chartOverlay { proxy in
             GeometryReader { geo in
@@ -365,7 +365,7 @@ struct FlowBarChart: View {
         .padding(.vertical, 12 * fontScale)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white)
+                .fill(GrayPalette.cardSurface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)

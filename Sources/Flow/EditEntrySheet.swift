@@ -161,7 +161,7 @@ struct EditEntrySheet: View {
                     Text("LIVE")
                         .font(.mono(8 * fontScale, weight: .semibold))
                         .tracking(1.5)
-                        .foregroundColor(.white)
+                        .foregroundColor(GrayPalette.cream)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(GrayPalette.charcoal))

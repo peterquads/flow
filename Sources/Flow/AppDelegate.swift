@@ -5,6 +5,7 @@ import Combine
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var store: AppStore!
+    private let theme = AppTheme()
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var dashboardWindow: NSWindow?
@@ -67,15 +68,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onClose: { [weak self] in self?.closePopover() }
         )
         .environmentObject(store)
+        .environmentObject(theme)
 
         popover = NSPopover()
         popover.behavior = .transient
         popover.animates = false
-        // Native dark vibrant look — matches Control Center / Sound popover.
-        popover.appearance = NSAppearance(named: .vibrantDark)
+        popover.appearance = theme.nsAppearance
         let hosting = NSHostingController(rootView: panel)
         hosting.sizingOptions = [.intrinsicContentSize]
         popover.contentViewController = hosting
+
+        // Track system theme changes for the popover too.
+        theme.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                self.popover.appearance = self.theme.nsAppearance
+            }
+            .store(in: &subscriptions)
     }
 
     private func observeStore(_ store: AppStore) {
@@ -217,7 +227,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let root = DashboardView().environmentObject(store)
+        let root = DashboardView()
+            .environmentObject(store)
+            .environmentObject(theme)
         let hosting = NSHostingController(rootView: root)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 820, height: 640),
@@ -225,14 +237,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered, defer: false
         )
         window.contentViewController = hosting
+        window.appearance = theme.nsAppearance
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
+        // Let the frosted BlurView in DashboardView paint the whole window.
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.title = "Flow"
         window.center()
         window.isReleasedWhenClosed = false
         window.delegate = self
         dashboardWindow = window
+
+        // Keep the window appearance in sync with the system pref.
+        theme.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self, weak window] _ in
+                window?.appearance = self?.theme.nsAppearance
+            }
+            .store(in: &subscriptions)
+
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

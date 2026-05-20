@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var store: AppStore
+    @EnvironmentObject var theme: AppTheme
     @State private var range: ChartRange = .day
     @State private var showClearAlert = false
     @State private var showSettingsSheet = false
@@ -16,7 +17,11 @@ struct DashboardView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                GrayPalette.cream.ignoresSafeArea()
+                // Frosted-glass window background.
+                BlurView(material: .underWindowBackground, blending: .behindWindow)
+                    .ignoresSafeArea()
+                GrayPalette.cream.opacity(0.18)
+                    .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 28 * fontScale) {
                         header
@@ -39,6 +44,7 @@ struct DashboardView: View {
             .onChange(of: geo.size.width) { _, new in contentWidth = new }
         }
         .frame(minWidth: 760, minHeight: 600)
+        .preferredColorScheme(theme.colorScheme)
         .alert("Clear all data?", isPresented: $showClearAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Clear", role: .destructive) { store.clearAllData() }
@@ -48,6 +54,8 @@ struct DashboardView: View {
         .sheet(item: editingBinding) { editing in
             EditEntrySheet(taskName: editing.name, range: range, fontScale: fontScale)
                 .environmentObject(store)
+                .environmentObject(theme)
+                .preferredColorScheme(theme.colorScheme)
         }
     }
 
@@ -67,11 +75,10 @@ struct DashboardView: View {
 
     private var header: some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
+                // Minimalist italic wordmark.
                 Text("Flow")
-                    .font(.emilio(.semibold, size: 14 * fontScale))
-                    .tracking(4)
-                    .textCase(.uppercase)
+                    .font(.emilio(.italic, size: 22 * fontScale))
                     .foregroundColor(GrayPalette.textSecondary)
                 Text(range.title)
                     .font(.emilio(.semibold, size: 36 * fontScale))
@@ -93,7 +100,7 @@ struct DashboardView: View {
             ZStack {
                 Circle().fill(GrayPalette.charcoal)
                 Image(systemName: "plus")
-                    .font(.system(size: circleIconSize, weight: .semibold))
+                    .font(.system(size: circleIconSize * 1.25, weight: .heavy))
                     .foregroundColor(GrayPalette.cream)
             }
             .frame(width: circleButtonSize, height: circleButtonSize)
@@ -104,6 +111,8 @@ struct DashboardView: View {
         .sheet(isPresented: $showManualEntry) {
             ManualEntrySheet(fontScale: fontScale)
                 .environmentObject(store)
+                .environmentObject(theme)
+                .preferredColorScheme(theme.colorScheme)
         }
     }
 
@@ -113,7 +122,7 @@ struct DashboardView: View {
                 // strokeBorder insets the line — keeps the visible outer edge
                 // at exactly the same diameter as the filled add-entry circle.
                 Circle()
-                    .fill(Color.white)
+                    .fill(GrayPalette.cardSurface)
                     .overlay(
                         Circle().strokeBorder(GrayPalette.hairline.opacity(0.6), lineWidth: 1)
                     )
@@ -339,7 +348,7 @@ private struct ChartBreakdownSection: View, Equatable {
                 Text("LIVE")
                     .font(.mono(9 * fontScale, weight: .semibold))
                     .tracking(2)
-                    .foregroundColor(.white)
+                    .foregroundColor(GrayPalette.cream)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
                     .background(Capsule().fill(GrayPalette.charcoal))
@@ -387,7 +396,7 @@ private struct CardSurface: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.white)
+                    .fill(GrayPalette.cardSurface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18)

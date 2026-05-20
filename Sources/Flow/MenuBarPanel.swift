@@ -1,22 +1,15 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Dark vibrant palette for the menu bar popover
-//
-// Matches the native macOS Control Center / Sound popover look — dark
-// translucent background, white text, soft hairlines. Hardcoded here
-// (rather than via GrayPalette) so the dashboard window can keep its
-// cream/charcoal aesthetic independently.
+// MARK: - Palette for the menu bar popover (always vibrant dark)
 
 private enum PanelPalette {
-    static let primary = Color.white.opacity(0.95)
-    static let secondary = Color.white.opacity(0.72)
-    static let muted = Color.white.opacity(0.42)
-    static let hairline = Color.white.opacity(0.10)
-    static let inputBG = Color.white.opacity(0.08)
-    static let hoverBG = Color.white.opacity(0.10)
-    static let pillBG = Color.white.opacity(0.92)
-    static let pillFG = Color.black.opacity(0.85)
+    static let primary   = Color.primary
+    static let secondary = Color.secondary
+    static let muted     = Color.secondary.opacity(0.7)
+    static let hairline  = Color.primary.opacity(0.10)
+    static let inputBG   = Color.primary.opacity(0.06)
+    static let hoverBG   = Color.primary.opacity(0.08)
 }
 
 struct MenuBarPanel: View {
@@ -33,14 +26,7 @@ struct MenuBarPanel: View {
 
     var body: some View {
         ZStack {
-            BlurView(
-                material: .menu,
-                blending: .behindWindow,
-                forcedAppearance: .vibrantDark
-            )
-            // Subtle dark wash to keep contrast with bright wallpapers
-            // showing through without losing the see-through feel.
-            Color.black.opacity(0.08)
+            BlurView(material: .menu, blending: .behindWindow)
             VStack(alignment: .leading, spacing: 12) {
                 if let current = store.currentTask {
                     runningStrip(current)

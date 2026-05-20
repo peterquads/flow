@@ -104,3 +104,11 @@ fi
 echo ""
 echo "✔ Installed $APP to $INSTALL_DIR/$APP.app"
 echo "  Open with: open \"$INSTALL_DIR/$APP.app\""
+
+# 4. Package a distributable zip of the .app for GitHub Releases.
+ZIP="$BUILD/$APP.app.zip"
+rm -f "$ZIP"
+# `ditto -c -k --sequesterRsrc --keepParent` is the macOS-correct way to
+# zip a .app — preserves resource forks, signatures, and the bundle dir.
+/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$STAGE" "$ZIP"
+echo "  Distributable: $ZIP ($(du -h "$ZIP" | cut -f1))"

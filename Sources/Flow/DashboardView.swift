@@ -76,10 +76,17 @@ struct DashboardView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                // Minimalist italic wordmark.
-                Text("Flow")
-                    .font(.emilio(.italic, size: 22 * fontScale))
-                    .foregroundColor(GrayPalette.textSecondary)
+                // Cursive wordmark + enso brand mark sitting beside it.
+                HStack(alignment: .firstTextBaseline, spacing: 6 * fontScale) {
+                    Text("Flow")
+                        .font(.custom("SnellRoundhand-Bold", size: 30 * fontScale))
+                        .foregroundColor(GrayPalette.textSecondary)
+                    EnsoView(
+                        size: 22 * fontScale,
+                        color: GrayPalette.textSecondary
+                    )
+                    .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] + 4 }
+                }
                 Text(range.title)
                     .font(.emilio(.semibold, size: 36 * fontScale))
                     .foregroundColor(GrayPalette.charcoal)

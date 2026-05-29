@@ -11,6 +11,34 @@ BIN_SRC="$ROOT/.build/$ARCH-apple-macosx/release/$APP"
 INSTALL_DIR="${FLOW_INSTALL_DIR:-/Applications}"
 INSTALL_AGENT="${FLOW_INSTALL_AGENT:-1}"
 
+echo "==> Checking for Xcode command-line tools"
+if ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
+  echo "    Not found. Launching the installer (a system dialog will appear)..."
+  echo "    Click \"Install\" in the dialog, then leave this window open."
+  /usr/bin/xcode-select --install >/dev/null 2>&1 || true
+  # `xcode-select --install` returns immediately; the GUI install runs async.
+  # Poll until the tools are present (or give up after ~30 min so we never hang
+  # forever in a headless/CI context).
+  waited=0
+  until /usr/bin/xcode-select -p >/dev/null 2>&1; do
+    if [ "$waited" -ge 1800 ]; then
+      echo "ERROR: timed out waiting for Xcode command-line tools."
+      echo "       Install them manually with: xcode-select --install"
+      exit 1
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+  echo "    Command-line tools installed."
+fi
+
+# Final sanity check: the Swift compiler must actually be runnable.
+if ! command -v swift >/dev/null 2>&1; then
+  echo "ERROR: 'swift' not found even after installing command-line tools."
+  echo "       Try: sudo xcode-select --reset   (or install full Xcode)"
+  exit 1
+fi
+
 echo "==> swift build -c release --arch $ARCH (stripped, size-optimized)"
 cd "$ROOT"
 swift build -c release --arch "$ARCH" \

@@ -14,7 +14,9 @@ in your menu bar, and review a clean dashboard whenever you want.
 
 ## Install
 
-Requires macOS 14+ and Xcode command-line tools (`xcode-select --install`).
+Requires macOS 14+. The build script installs the Xcode command-line tools
+automatically if they're missing (a system dialog will appear — click
+"Install" and leave the terminal open until it finishes).
 
 ```sh
 git clone https://github.com/peterquads/flow.git

@@ -17,7 +17,7 @@ in your menu bar, and review a clean dashboard whenever you want.
 Requires macOS 14+ and Xcode command-line tools (`xcode-select --install`).
 
 ```sh
-git clone https://github.com/<you>/flow.git
+git clone https://github.com/peterquads/flow.git
 cd flow
 ./scripts/build.sh
 ```
